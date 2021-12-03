@@ -1,6 +1,6 @@
 object Day3 {
 
-    fun countOnesAndZeroes(numbers: List<Int>, bitValue: Int): Pair<Int, Int> {
+    private fun countOnesAndZeroes(numbers: List<Int>, bitValue: Int): Pair<Int, Int> {
         val ones = numbers.count { it.and(bitValue) != 0 }
         val zeroes = numbers.size - ones
         return Pair(ones, zeroes)
