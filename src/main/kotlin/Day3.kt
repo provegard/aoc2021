@@ -1,12 +1,15 @@
 object Day3 {
 
+    private fun getBit(i: Int, size: Int, numbers: List<Int>, pick: (Int) -> Boolean): Int {
+        val mask = 1.shl(size - i)
+        val ones = numbers.count { it.and(mask) != 0 }
+        val zeroes = numbers.size - ones
+        return if (pick(ones.compareTo(zeroes))) 1 else 0
+    }
+
     private fun simpleRate(numbers: List<Int>, size: Int, pick: (Int) -> Boolean): Int {
         return (1..size).fold(0) { d, i ->
-            val mask = 1.shl(size - i)
-            val ones = numbers.count { it.and(mask) != 0 }
-            val zeroes = numbers.size - ones
-            val bit = if (pick(ones.compareTo(zeroes))) 1 else 0
-            d.shl(1) + bit
+            d.shl(1) + getBit(i, size, numbers, pick)
         }
     }
 
@@ -16,16 +19,12 @@ object Day3 {
         return gamma * epsilon
     }
 
-    private fun advRate(numbers: List<Int>, size: Int, tieBreaker: Int, pick: (Int) -> Boolean): Int {
+    private fun advRate(numbers: List<Int>, size: Int, pick: (Int) -> Boolean): Int {
         return (1..size).fold(numbers) { candidates, i ->
             val mask = 1.shl(size - i)
-            val ones = candidates.count { it.and(mask) != 0 }
-            val zeroes = candidates.size - ones
+            val bit = getBit(i, size, candidates, pick)
 
-            val bitToKeep = if (ones == zeroes) tieBreaker else {
-                if (pick(ones.compareTo(zeroes))) 1 else 0
-            }
-            val bitValToKeep = mask * bitToKeep
+            val bitValToKeep = mask * bit
             if (candidates.size <= 1)
                 candidates
             else
@@ -34,8 +33,8 @@ object Day3 {
     }
 
     fun part2(numbers: List<Int>, size: Int): Int {
-        val oxyRating = advRate(numbers, size, 1) { it > 0 }
-        val co2Rating = advRate(numbers, size, 0) { it < 0 }
+        val oxyRating = advRate(numbers, size) { it >= 0 }
+        val co2Rating = advRate(numbers, size) { it < 0 }
 
         return oxyRating * co2Rating
     }
