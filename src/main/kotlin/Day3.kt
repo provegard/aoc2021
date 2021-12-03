@@ -1,58 +1,41 @@
 object Day3 {
 
-    private fun countOnesAndZeroes(numbers: List<Int>, bitValue: Int): Pair<Int, Int> {
-        val ones = numbers.count { it.and(bitValue) != 0 }
-        val zeroes = numbers.size - ones
-        return Pair(ones, zeroes)
+    private fun simpleRate(numbers: List<Int>, size: Int, pick: (Int) -> Boolean): Int {
+        return (1..size).fold(0) { d, i ->
+            val mask = 1.shl(size - i)
+            val ones = numbers.count { it.and(mask) != 0 }
+            val zeroes = numbers.size - ones
+            val bit = if (pick(ones.compareTo(zeroes))) 1 else 0
+            d.shl(1) + bit
+        }
     }
 
     fun part1(numbers: List<Int>, size: Int): Int {
-        var gamma = 0
-        var epsilon = 0
-
-        for (i in (size - 1) downTo 0) {
-            val bitValue = 1.shl(i)
-
-            val (ones, zeroes) = countOnesAndZeroes(numbers, bitValue)
-
-            val gammaBit = if (ones > zeroes) 1 else 0
-            val epsilonBit = 1 - gammaBit
-
-            gamma = (gamma shl 1) + gammaBit
-            epsilon = (epsilon shl 1) + epsilonBit
-        }
-
+        val gamma = simpleRate(numbers, size) { it > 0 }
+        val epsilon = simpleRate(numbers, size) { it < 0 }
         return gamma * epsilon
     }
 
-    private fun findRating(numbers: List<Int>, size: Int, tieBreaker: Int, pick: (Int, Int) -> Boolean): Int {
-        var candidates = numbers
+    private fun advRate(numbers: List<Int>, size: Int, tieBreaker: Int, pick: (Int) -> Boolean): Int {
+        return (1..size).fold(numbers) { candidates, i ->
+            val mask = 1.shl(size - i)
+            val ones = candidates.count { it.and(mask) != 0 }
+            val zeroes = candidates.size - ones
 
-        while (candidates.size > 1) {
-            for (i in (size - 1) downTo 0) {
-                val bitValue = 1.shl(i)
-
-                val (ones, zeroes) = countOnesAndZeroes(candidates, bitValue)
-
-                val bitToKeep = if (ones == zeroes) tieBreaker else {
-                    if (pick(ones, zeroes)) 1 else 0
-                }
-
-                val bitValToKeep = bitValue * bitToKeep
-                candidates = candidates.filter { it.and(bitValue) == bitValToKeep }
-
-                if (candidates.size <= 1) {
-                    break
-                }
+            val bitToKeep = if (ones == zeroes) tieBreaker else {
+                if (pick(ones.compareTo(zeroes))) 1 else 0
             }
-        }
-
-        return candidates[0]
+            val bitValToKeep = mask * bitToKeep
+            if (candidates.size <= 1)
+                candidates
+            else
+                candidates.filter { it.and(mask) == bitValToKeep }
+        }.first()
     }
 
     fun part2(numbers: List<Int>, size: Int): Int {
-        val oxyRating = findRating(numbers, size, 1) { ones, zeroes -> ones > zeroes }
-        val co2Rating = findRating(numbers, size, 0) { ones, zeroes -> ones < zeroes }
+        val oxyRating = advRate(numbers, size, 1) { it > 0 }
+        val co2Rating = advRate(numbers, size, 0) { it < 0 }
 
         return oxyRating * co2Rating
     }
@@ -78,6 +61,6 @@ fun main(args: Array<String>) {
     val size = lines[0].length
     val numbers = lines.map { it.toInt(2) }
 
-    println("Part 1 = ${Day3.part1(numbers, size)}")
-    println("Part 2 = ${Day3.part2(numbers, size)}")
+    println("Part 1 = ${Day3.part1(numbers, size)} (693486)")
+    println("Part 2 = ${Day3.part2(numbers, size)} (3379326)")
 }
