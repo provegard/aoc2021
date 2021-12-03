@@ -1,5 +1,11 @@
 object Day3 {
 
+    fun countOnesAndZeroes(numbers: List<Int>, bitValue: Int): Pair<Int, Int> {
+        val ones = numbers.count { it.and(bitValue) != 0 }
+        val zeroes = numbers.size - ones
+        return Pair(ones, zeroes)
+    }
+
     fun part1(numbers: List<Int>, size: Int): Int {
         var gamma = 0
         var epsilon = 0
@@ -7,8 +13,7 @@ object Day3 {
         for (i in (size - 1) downTo 0) {
             val bitValue = 1.shl(i)
 
-            val ones = numbers.count { it.and(bitValue) != 0 }
-            val zeroes = numbers.size - ones
+            val (ones, zeroes) = countOnesAndZeroes(numbers, bitValue)
 
             val gammaBit = if (ones > zeroes) 1 else 0
             val epsilonBit = 1 - gammaBit
@@ -20,21 +25,21 @@ object Day3 {
         return gamma * epsilon
     }
 
-    private fun findRating(numbers: List<Int>, size: Int, keep: Int, pick: (Int, Int) -> Boolean): Int {
+    private fun findRating(numbers: List<Int>, size: Int, tieBreaker: Int, pick: (Int, Int) -> Boolean): Int {
         var candidates = numbers
 
         while (candidates.size > 1) {
             for (i in (size - 1) downTo 0) {
                 val bitValue = 1.shl(i)
 
-                val ones = candidates.count { it.and(bitValue) != 0 }
-                val zeroes = candidates.size - ones
+                val (ones, zeroes) = countOnesAndZeroes(candidates, bitValue)
 
-                val crit = if (ones == zeroes) (bitValue * keep) else {
-                    if (pick(ones, zeroes)) bitValue else 0
+                val bitToKeep = if (ones == zeroes) tieBreaker else {
+                    if (pick(ones, zeroes)) 1 else 0
                 }
 
-                candidates = candidates.filter { it.and(bitValue) == crit }
+                val bitValToKeep = bitValue * bitToKeep
+                candidates = candidates.filter { it.and(bitValue) == bitValToKeep }
 
                 if (candidates.size <= 1) {
                     break
