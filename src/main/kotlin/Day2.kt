@@ -39,7 +39,7 @@ object Day2 {
 
 fun main(args: Array<String>) {
 
-    val commands = File("input/day2.txt").useLines { it.toList() }.map {
+    val commands = readLines("day2").map {
         val parts = it.split(" ")
         val op = parts[0]
         val units = Integer.parseInt(parts[1])

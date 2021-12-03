@@ -12,7 +12,7 @@ object Day1 {
 
 fun main(args: Array<String>) {
 
-    val numbers = File("input/day1.txt").useLines { it.toList() }.map { Integer.parseInt(it) }
+    val numbers = readLines("day1").map { Integer.parseInt(it) }
 
     println("Part 1 = ${Day1.part1(numbers)}")
     println("Part 2 = ${Day1.part2(numbers)}")
