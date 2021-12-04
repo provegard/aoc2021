@@ -35,6 +35,10 @@ object Day4 {
             return boards.any { it.isWin() }
         }
 
+        fun isDone(): Boolean {
+            return numbers.isEmpty()
+        }
+
         fun calculate(): Int {
             val winner = boards.first { it.isWin() }
             return winner.unmarkedSum() * prevNumber
@@ -44,6 +48,11 @@ object Day4 {
             val num = numbers.first()
             val newBoards = boards.map { it.markNumber(num) }
             return World(newBoards, numbers.drop(1), num)
+        }
+
+        fun dropWinners(): World {
+            val rest = boards.filterNot { it.isWin() }
+            return World(rest, numbers, 0)
         }
     }
 
@@ -75,6 +84,19 @@ object Day4 {
         }
         return world.calculate()
     }
+
+    fun part2(lines: List<String>): Int {
+        var world = createWorld(lines)
+        var lastWin = 0
+        while (!world.isDone()) {
+            world = world.step()
+            if (world.hasWinner()) {
+                lastWin = world.calculate()
+                world = world.dropWinners()
+            }
+        }
+        return lastWin
+    }
 }
 
 fun main(args: Array<String>) {
@@ -82,4 +104,5 @@ fun main(args: Array<String>) {
     val lines = readLines("day4")
 
     println("Part 1 = ${Day4.part1(lines)}")
+    println("Part 2 = ${Day4.part2(lines)}")
 }
