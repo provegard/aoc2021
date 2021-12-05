@@ -14,19 +14,17 @@ object Day4 {
         }
 
         fun isWin(): Boolean {
-            return listOf(state, columns().toList()).flatten().any { it.all { n -> markedNumbers.contains(n) } }
+            return rowsAndColumns().any { it.all { n -> markedNumbers.contains(n) } }
         }
 
         fun unmarkedSum(): Int {
-            return listOf(state, columns().toList()).flatten().flatten().filter { !markedNumbers.contains(it) }.distinct().sum()
+            return rowsAndColumns().flatten().filter { !markedNumbers.contains(it) }.distinct().sum()
         }
 
-        private fun columns(): Sequence<List<Int>> = sequence {
-            // Assume square
-            for (i in state.indices) {
-                yield(state.map { it[i] })
-            }
-        }
+        private fun rowsAndColumns(): List<List<Int>> = rows() + columns()
+        private fun rows(): List<List<Int>> = state
+        private fun columns(): List<List<Int>> =
+            state.indices.map { i -> state.map { it[i] }}
     }
 
     class World(private val boards: List<Board>, private val numbers: List<Int>, private val prevNumber: Int) {
@@ -56,7 +54,7 @@ object Day4 {
         }
     }
 
-    fun readBoardLines(lines: List<String>): List<List<Int>> {
+    private fun readBoardLines(lines: List<String>): List<List<Int>> {
         if (lines.isEmpty()) return emptyList()
         val line = lines.first().trim()
         if (line == "") return emptyList()
@@ -64,38 +62,36 @@ object Day4 {
         return listOf(numbers).plus(readBoardLines(lines.drop(1)))
     }
 
-    fun readBoards(lines: List<String>): List<Board> {
+    private fun readBoards(lines: List<String>): List<Board> {
         if (lines.isEmpty()) return emptyList()
         val boardLines = readBoardLines(lines)
         val next = lines.drop(1 + boardLines.size)
         return listOf(Board(boardLines)).plus(readBoards(next))
     }
 
-    fun createWorld(lines: List<String>): World {
+    private fun createWorld(lines: List<String>): World {
         val numbers = lines.first().split(",").map { it.toInt() }
         val boards = readBoards(lines.drop(1))
         return World(boards, numbers, -1)
     }
 
-    fun part1(lines: List<String>): Int {
-        var world = createWorld(lines)
-        while (!world.hasWinner()) {
-            world = world.step()
+    private fun wins(world: World): Sequence<Int> = sequence {
+        if (!world.isDone()) {
+            if (world.hasWinner())
+                yield(world.calculate())
+            val next = world.dropWinners().step()
+            yieldAll(wins(next))
         }
-        return world.calculate()
+    }
+
+    fun part1(lines: List<String>): Int {
+        val world = createWorld(lines)
+        return wins(world).first()
     }
 
     fun part2(lines: List<String>): Int {
-        var world = createWorld(lines)
-        var lastWin = 0
-        while (!world.isDone()) {
-            world = world.step()
-            if (world.hasWinner()) {
-                lastWin = world.calculate()
-                world = world.dropWinners()
-            }
-        }
-        return lastWin
+        val world = createWorld(lines)
+        return wins(world).last()
     }
 }
 
@@ -103,6 +99,6 @@ fun main(args: Array<String>) {
 
     val lines = readLines("day4")
 
-    println("Part 1 = ${Day4.part1(lines)}")
-    println("Part 2 = ${Day4.part2(lines)}")
+    println("Part 1 = ${Day4.part1(lines)} (11536)")
+    println("Part 2 = ${Day4.part2(lines)} (1284)")
 }
