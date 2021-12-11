@@ -16,22 +16,11 @@ object Day11 {
         return lines.map { it.trim().chars().map { it - 48 }.toArray() }.toTypedArray()
     }
 
-    private fun dump(map: PersistentMap<Pos, Int>) {
-        for (r in (0 until 10)) {
-            for (c in (0 until 10)) {
-                val pos = Pos(r, c)
-                print(map[pos])
-            }
-            println()
-        }
-        println()
-    }
-
     private fun flash(map: PersistentMap<Pos, Int>, visited: PersistentSet<Pos>): PersistentMap<Pos, Int> {
         val flashingPositions = map.entries.filter { it.value > 9 && !visited.contains(it.key) }.map { it.key }
         if (flashingPositions.isEmpty()) return map
 
-        val allAdjacent = flashingPositions.flatMap { adjacent(it) } // .distinct() // TODO: distinct here or not?
+        val allAdjacent = flashingPositions.flatMap { adjacent(it) }
         val incremented = allAdjacent.fold(map) { acc, pos ->
             acc.put(pos, acc.getOrDefault(pos, 0) + 1)
         }
@@ -59,16 +48,30 @@ object Day11 {
         return reset(m2)
     }
 
-    fun part1(lines: List<String>, steps: Int = 100): Int {
+    private fun toMap(lines: List<String>): PersistentMap<Pos, Int> {
         val mat = toMat(lines)
         val map = (mat.indices).flatMap { r -> (0 until mat[r].size).map { c -> Pos(r, c) to mat[r][c] } }.toMap().toPersistentMap()
+        return map
+    }
 
-        val result = (1..steps).fold(Pair(map, 0)) { acc, i ->
-            val (newMap, flashed) = step(acc.first)
-            Pair(newMap, acc.second + flashed)
-        }
+    private fun steps(map: PersistentMap<Pos, Int>, fl: Int = 0): Sequence<Pair<PersistentMap<Pos, Int>, Int>> = sequence {
+        val (newMap, flashed) = step(map)
+        yield(Pair(newMap, fl + flashed))
+        yieldAll(steps(newMap, fl + flashed))
+    }
 
-        return result.second
+    private fun allFlashed(map: PersistentMap<Pos, Int>): Boolean {
+        return map.entries.all { it.value == 0 }
+    }
+
+    fun part1(lines: List<String>, stepCount: Int = 100): Int {
+        val map = toMap(lines)
+        return steps(map).take(stepCount).last().second
+    }
+
+    fun part2(lines: List<String>): Int {
+        val map = toMap(lines)
+        return steps(map).withIndex().dropWhile { !allFlashed(it.value.first) }.first().index + 1
     }
 }
 
@@ -88,4 +91,6 @@ fun main() {
     assert(35, Day11.part1(testLines, 2), "Part 1, test reduced")
     assert(1656, Day11.part1(testLines), "Part 1, test")
     assert(1700, Day11.part1(lines), "Part 1")
+    assert(195, Day11.part2(testLines), "Part 2, test")
+    assert(273, Day11.part2(lines), "Part 2")
 }
