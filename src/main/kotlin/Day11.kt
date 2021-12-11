@@ -2,7 +2,7 @@ import kotlinx.collections.immutable.*
 
 object Day11 {
     private fun isValidPos(pos: Pos): Boolean {
-        return pos.r >= 0 && pos.r < 10 && pos.c >= 0 && pos.c < 10
+        return pos.r in 0..9 && pos.c in 0..9
     }
 
     private fun adjacent(pos: Pos): List<Pos> {
@@ -22,7 +22,7 @@ object Day11 {
 
         val allAdjacent = flashingPositions.flatMap { adjacent(it) }
         val incremented = allAdjacent.fold(map) { acc, pos ->
-            acc.put(pos, acc.getOrDefault(pos, 0) + 1)
+            acc.put(pos, acc[pos]!! + 1)
         }
         return flash(incremented, visited + flashingPositions)
     }
@@ -35,17 +35,19 @@ object Day11 {
         return Pair(newMap, flashed.size)
     }
 
+    private fun emptyPersistentSetOfPos()
+        = emptySet<Pos>().toPersistentSet()
+
     private fun step(map: PersistentMap<Pos, Int>): Pair<PersistentMap<Pos, Int>, Int> {
-        // increase all
-        val m1 = map.entries.fold(map) { acc, e ->
+        val increased = map.entries.fold(map) { acc, e ->
             acc.put(e.key, e.value + 1)
         }
-
-        // propagate
-        val m2 = flash(m1, emptySet<Pos>().toPersistentSet())
-
-        // reset
-        return reset(m2)
+        return reset(
+            flash(
+                increased,
+                emptyPersistentSetOfPos()
+            )
+        )
     }
 
     private fun toMap(lines: List<String>): PersistentMap<Pos, Int> {
