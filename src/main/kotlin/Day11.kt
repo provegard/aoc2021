@@ -1,0 +1,91 @@
+import kotlinx.collections.immutable.*
+
+object Day11 {
+    private fun isValidPos(pos: Pos): Boolean {
+        return pos.r >= 0 && pos.r < 10 && pos.c >= 0 && pos.c < 10
+    }
+
+    private fun adjacent(pos: Pos): List<Pos> {
+        return (-1..1).flatMap { r -> (-1..1).map { c -> Pair(r, c) } }
+            .filter { it != Pair(0, 0) }
+            .map { Pos(pos.r + it.first, pos.c + it.second) }
+            .filter { isValidPos(it) }
+    }
+
+    private fun toMat(lines: List<String>): Array<IntArray> {
+        return lines.map { it.trim().chars().map { it - 48 }.toArray() }.toTypedArray()
+    }
+
+    private fun dump(map: PersistentMap<Pos, Int>) {
+        for (r in (0 until 10)) {
+            for (c in (0 until 10)) {
+                val pos = Pos(r, c)
+                print(map[pos])
+            }
+            println()
+        }
+        println()
+    }
+
+    private fun flash(map: PersistentMap<Pos, Int>, visited: PersistentSet<Pos>): PersistentMap<Pos, Int> {
+        val flashingPositions = map.entries.filter { it.value > 9 && !visited.contains(it.key) }.map { it.key }
+        if (flashingPositions.isEmpty()) return map
+
+        val allAdjacent = flashingPositions.flatMap { adjacent(it) } // .distinct() // TODO: distinct here or not?
+        val incremented = allAdjacent.fold(map) { acc, pos ->
+            acc.put(pos, acc.getOrDefault(pos, 0) + 1)
+        }
+        return flash(incremented, visited + flashingPositions)
+    }
+
+    private fun reset(map: PersistentMap<Pos, Int>): Pair<PersistentMap<Pos, Int>, Int> {
+        val flashed = map.entries.filter { it.value > 9 }
+        val newMap = flashed.fold(map) { acc, e ->
+            acc.put(e.key, 0)
+        }
+        return Pair(newMap, flashed.size)
+    }
+
+    private fun step(map: PersistentMap<Pos, Int>): Pair<PersistentMap<Pos, Int>, Int> {
+        // increase all
+        val m1 = map.entries.fold(map) { acc, e ->
+            acc.put(e.key, e.value + 1)
+        }
+
+        // propagate
+        val m2 = flash(m1, emptySet<Pos>().toPersistentSet())
+
+        // reset
+        return reset(m2)
+    }
+
+    fun part1(lines: List<String>, steps: Int = 100): Int {
+        val mat = toMat(lines)
+        val map = (mat.indices).flatMap { r -> (0 until mat[r].size).map { c -> Pos(r, c) to mat[r][c] } }.toMap().toPersistentMap()
+
+        val result = (1..steps).fold(Pair(map, 0)) { acc, i ->
+            val (newMap, flashed) = step(acc.first)
+            Pair(newMap, acc.second + flashed)
+        }
+
+        return result.second
+    }
+}
+
+fun main() {
+    val testLines = ("5483143223\n" +
+            "2745854711\n" +
+            "5264556173\n" +
+            "6141336146\n" +
+            "6357385478\n" +
+            "4167524645\n" +
+            "2176841721\n" +
+            "6882881134\n" +
+            "4846848554\n" +
+            "5283751526").split("\n")
+    val lines = readLines("day11")
+
+    assert(35, Day11.part1(testLines, 2), "Part 1, test reduced")
+    assert(1656, Day11.part1(testLines), "Part 1, test")
+    assert(1700, Day11.part1(lines), "Part 1")
+}

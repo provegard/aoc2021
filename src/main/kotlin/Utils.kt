@@ -10,3 +10,5 @@ fun <T>assert(expected: T, actual: T, desc: String) {
     }
     println("$desc: OK!")
 }
+
+data class Pos(val r: Int, val c: Int)

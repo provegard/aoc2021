@@ -1,7 +1,5 @@
 object Day9 {
 
-    data class Pos(val r: Int, val c: Int)
-
     private fun isValidPos(mat: Array<IntArray>, pos: Pos): Boolean {
         return pos.r >= 0 && pos.r < mat.size && pos.c >= 0 && pos.c < mat[0].size
     }
