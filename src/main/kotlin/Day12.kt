@@ -20,38 +20,30 @@ object Day12 {
             return Graph(newConnections)
         }
 
-        private fun walk(pathSoFar: List<Node>, node: Node): List<Path> {
+        private fun walk(pathSoFar: List<Node>, node: Node, filterVisitable: (List<Node>, List<Node>) -> List<Node>): List<Path> {
             val newPath = pathSoFar + node
             if (node.isEnd()) return listOf(Path(newPath))
 
-            val next = connections.getOrDefault(node, emptyList()).filter { !newPath.contains(it) || !it.isSmall() }
-            return next.flatMap { walk(newPath, it) }
+            val next = filterVisitable(connections.getOrDefault(node, emptyList()), newPath)
+            return next.flatMap { walk(newPath, it, filterVisitable) }
         }
 
         fun walk(): List<Path> {
             val start = connections.keys.first { it.isStart() }
-            return walk(emptyList(), start)
-        }
-
-        private fun walk2(pathSoFar: List<Node>, node: Node): List<Path> {
-            val newPath = pathSoFar + node
-            if (node.isEnd()) {
-                return listOf(Path(newPath))
-            }
-
-            val hasVisitedSmallTwice = newPath.filter { it.isSmall() }.groupBy { it }.any { it.value.size == 2 }
-
-            val next = connections.getOrDefault(node, emptyList()).filter {
-                val hasVisitedThisBefore = newPath.contains(it)
-                val canVisitThisAgain = !it.isSmall() || (!it.isStart() && !it.isEnd() && !hasVisitedSmallTwice)
-                !hasVisitedThisBefore || canVisitThisAgain
-            }
-            return next.flatMap { walk2(newPath, it) }
+            return walk(emptyList(), start) { next, newPath -> next.filter { !newPath.contains(it) || !it.isSmall() } }
         }
 
         fun walk2(): List<Path> {
             val start = connections.keys.first { it.isStart() }
-            return walk2(emptyList(), start)
+            return walk(emptyList(), start) { next, newPath ->
+                val hasVisitedSmallTwice = newPath.filter { it.isSmall() }.groupBy { it }.any { it.value.size == 2 }
+
+                next.filter {
+                    val hasVisitedThisBefore = newPath.contains(it)
+                    val canVisitThisAgain = !it.isSmall() || (!it.isStart() && !hasVisitedSmallTwice)
+                    !hasVisitedThisBefore || canVisitThisAgain
+                }
+            }
         }
     }
 
@@ -64,13 +56,8 @@ object Day12 {
         }
     }
 
-    fun part1(lines: List<String>): Int {
-        return toGraph(lines).walk().size
-    }
-
-    fun part2(lines: List<String>): Int {
-        return toGraph(lines).walk2().size
-    }
+    fun part1(lines: List<String>): Int = toGraph(lines).walk().size
+    fun part2(lines: List<String>): Int = toGraph(lines).walk2().size
 }
 
 fun main() {
@@ -83,5 +70,4 @@ fun main() {
     assert(103, Day12.part2(readLines("day12_ex2")), "Part 2, example 2")
     assert(3509, Day12.part2(readLines("day12_ex3")), "Part 2, example 3")
     assert(155477, Day12.part2(readLines("day12")), "Part 2")
-
 }
