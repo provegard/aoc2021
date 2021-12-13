@@ -12,3 +12,5 @@ fun <T>assert(expected: T, actual: T, desc: String) {
 }
 
 data class Pos(val r: Int, val c: Int)
+
+data class Coord(val x: Int, val y: Int)
