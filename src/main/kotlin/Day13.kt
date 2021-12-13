@@ -16,6 +16,18 @@ object Day13 {
         }
 
         fun count() = dots.size
+
+        fun print() {
+            val maxX = dots.maxOf { it.x }
+            val maxY = dots.maxOf { it.y }
+            for (y in 0..maxY) {
+                for (x in 0..maxX) {
+                    val c = dots.contains(Coord(x, y))
+                    print(if (c) "#" else ".")
+                }
+                println()
+            }
+        }
     }
     
     private fun emptyPaper() = Paper(emptySet<Coord>())
@@ -41,6 +53,12 @@ object Day13 {
         val (paper, folds) = parse(lines)
         return paper.fold(folds.first()).count()
     }
+
+    fun part2(lines: List<String>) {
+        val (paper, folds) = parse(lines)
+        val result = folds.fold(paper) { p, f -> p.fold(f) }
+        result.print()
+    }
 }
 
 fun main() {
@@ -49,4 +67,6 @@ fun main() {
 
     assert(17, Day13.part1(testLines), "Part 1, example")
     assert(693, Day13.part1(lines), "Part 1")
+
+    Day13.part2(lines) // UCLZRAZU
 }
