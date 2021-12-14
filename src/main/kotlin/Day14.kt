@@ -12,31 +12,54 @@ object Day14 {
         return template to rules
     }
 
-    private fun applyRules(s: String, rules: Map<String, String>): String {
-        val pairs = s.windowed(2)
-        return pairs.joinToString("") {
-            val ins = rules[it]
-            if (ins != null) (it[0] + ins) else "${it[0]}"
-        } + s.last()
+    private fun pairFrequencies(s: String): Map<String, Long> {
+        return s.windowed(2).groupBy { it }.map { it.key to it.value.size.toLong() }.toMap()
     }
 
-    private fun freqMap(s: String): Map<Char, Int> {
-        return s.groupBy { it }.map { it.key to it.value.size }.toMap()
+    private fun <K, V>entryPairs(m: Map<K, V>) = m.entries.map { it.key to it.value }
+
+    private fun applyRules(freq: Map<String, Long>, rules: Map<String, String>): Map<String, Long> {
+        val delta = freq.entries.fold(emptyList<Pair<String, Long>>()) { d, e ->
+            val ins = rules[e.key]
+            if (ins != null) {
+                val newPair1 = e.key[0] + ins
+                val newPair2 = ins + e.key[1]
+                d + listOf(
+                    e.key to -e.value,   // remove old pair
+                    newPair1 to e.value, // add first new pair
+                    newPair2 to e.value, // add second new pair
+                )
+            } else d
+        }
+
+        return (entryPairs(freq) + delta)
+            .groupBy { it.first }                               // group by pair
+            .map { it.key to it.value.sumOf { p -> p.second } } // calculate new count for each pair
+            .filter { it.second > 0L }                          // drop non-existent pairs
+            .toMap()
     }
 
-    fun part1(lines: List<String>, steps: Int = 10): Int {
+    fun diff(lines: List<String>, steps: Int = 10): Long {
         val (template, rules) = parse(lines)
-        val polymer = (1..steps).fold(template) { p, i -> applyRules(p, rules ) }
-        val f = freqMap(polymer)
-        val frequencies = f.values.sortedDescending()
+        val pairFreq = pairFrequencies(template)
+
+        val finalFreq = (1..steps).fold(pairFreq) { f, i -> applyRules(f, rules) }
+
+        // Take the first of each pair (don't double-count), meaning we must add in the last template char
+        val entryPairs = entryPairs(finalFreq).plus(Pair("${template.last()}", 1L))
+        val charFrequencies = entryPairs.map { it.first[0] to it.second }.groupBy { it.first }.map { it.key to it.value.sumOf { p -> p.second } }
+
+        val frequencies = charFrequencies.map { it.second }.sortedDescending()
         return frequencies.first() - frequencies.last()
     }
+
 }
 
 fun main() {
     val testLines = readLines("day14_ex")
     val lines = readLines("day14")
 
-    assert(1588, Day14.part1(testLines), "Day 14 part 1, example")
-    assert(2988, Day14.part1(lines), "Day 14 part 1")
+    assert(1588, Day14.diff(testLines), "Day 14 part 1, example")
+    assert(2988, Day14.diff(lines), "Day 14 part 1")
+    assert(3572761917024L, Day14.diff(lines, 40), "Day 14 part 2")
 }
