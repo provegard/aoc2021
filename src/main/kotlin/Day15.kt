@@ -1,4 +1,6 @@
 import kotlin.math.abs
+import kotlin.system.measureTimeMillis
+import java.util.PriorityQueue
 
 object Day15 {
 
@@ -25,21 +27,23 @@ object Day15 {
     }
 
     private fun aStar(start: Coord, goal: Coord, h: (Coord, Coord) -> Int, d: (Coord, Coord) -> Int, isValid: (Coord) -> Boolean): List<Coord> {
-        val openSet = mutableSetOf(start)
-        val cameFrom = mutableMapOf<Coord, Coord?>()
+        val cameFrom = mutableMapOf<Coord, Coord>()
         val gScore = mutableMapOf(start to 0)
         val fScore = mutableMapOf(start to h(start, goal))
 
+        val fComp = Comparator<Coord> { a, b ->
+            val fa = fScore.getOrDefault(a, Int.MAX_VALUE)
+            val fb = fScore.getOrDefault(b, Int.MAX_VALUE)
+            fa - fb
+        }
+        val openSet = PriorityQueue(fComp)
+        openSet.add(start)
+
         while (openSet.isNotEmpty()) {
-            val current = openSet.minByOrNull { fScore.getOrDefault(it, Int.MAX_VALUE) }!!
+            val current = openSet.peek()!!
+
             if (current == goal) {
-                var cur = current
-                val path = mutableListOf(cur)
-                while (cameFrom.contains(cur)) {
-                    cur = cameFrom[cur]!!
-                    path.add(0, cur)
-                }
-                return path
+                return generateSequence(current) { cameFrom[it] }.toList().reversed()
             }
 
             openSet.remove(current)
@@ -49,7 +53,9 @@ object Day15 {
                     cameFrom[neighbor] = current
                     gScore[neighbor] = tentG
                     fScore[neighbor] = tentG + h(current, neighbor)
-                    openSet.add(neighbor)
+                    if (!openSet.contains(neighbor)) {
+                        openSet.add(neighbor)
+                    }
                 }
             }
         }
@@ -103,5 +109,9 @@ fun main() {
     assert(40, Day15.part1(testLines), "Part 1, example")
     assert(527, Day15.part1(lines), "Part 1")
     assert(315, Day15.part2(testLines), "Part 2, example")
-    assert(2887, Day15.part2(lines), "Part 2")
+
+    val ms = measureTimeMillis {
+        assert(2887, Day15.part2(lines), "Part 2")
+    }
+    println("Part 2 took $ms ms")
 }
