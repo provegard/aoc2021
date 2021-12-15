@@ -1,6 +1,5 @@
 import kotlin.math.abs
 import kotlin.system.measureTimeMillis
-import java.util.PriorityQueue
 
 object Day15 {
 
@@ -22,50 +21,12 @@ object Day15 {
         )
     }
 
-    private fun manhattan(c1: Coord, c2: Coord): Int {
-        return abs(c1.x - c2.x) + abs(c1.y - c2.y)
-    }
-
-    private fun aStar(start: Coord, goal: Coord, h: (Coord, Coord) -> Int, d: (Coord, Coord) -> Int, isValid: (Coord) -> Boolean): List<Coord> {
-        val cameFrom = mutableMapOf<Coord, Coord>()
-        val gScore = mutableMapOf(start to 0)
-        val fScore = mutableMapOf(start to h(start, goal))
-
-        val fComp = Comparator<Coord> { a, b ->
-            val fa = fScore.getOrDefault(a, Int.MAX_VALUE)
-            val fb = fScore.getOrDefault(b, Int.MAX_VALUE)
-            fa - fb
-        }
-        val openSet = PriorityQueue(fComp)
-        openSet.add(start)
-
-        while (openSet.isNotEmpty()) {
-            val current = openSet.peek()!!
-
-            if (current == goal) {
-                return generateSequence(current) { cameFrom[it] }.toList().reversed()
-            }
-
-            openSet.remove(current)
-            for (neighbor in neighbors(current).filter { isValid(it) }) {
-                val tentG = gScore.getOrDefault(current, Int.MAX_VALUE) + d(current, neighbor)
-                if (tentG < gScore.getOrDefault(neighbor, Int.MAX_VALUE)) {
-                    cameFrom[neighbor] = current
-                    gScore[neighbor] = tentG
-                    fScore[neighbor] = tentG + h(current, neighbor)
-                    if (!openSet.contains(neighbor)) {
-                        openSet.add(neighbor)
-                    }
-                }
-            }
-        }
-        throw RuntimeException("Failed to reach end")
-    }
+    private fun manhattan(c1: Coord, c2: Coord) = abs(c1.x - c2.x) + abs(c1.y - c2.y)
 
     private fun aStar(map: Map<Coord, Int>): List<Coord> {
         val start = Coord(0, 0)
         val goal = Coord(map.keys.maxOf { it.x }, map.keys.maxOf { it.y })
-        return aStar(start, goal, { a, b -> manhattan(a, b) }, { a, b -> map[b]!! }, { map.containsKey(it) })
+        return aStar(start, goal, ::manhattan, { _, b -> map[b]!! }, { neighbors(it).filter { n -> map.containsKey(n) } })
     }
 
     private fun incRisk(risk: Int, add: Int): Int {
@@ -89,17 +50,14 @@ object Day15 {
         return newEntries.toMap()
     }
 
-    fun part1(lines: List<String>): Int {
-        val map = parse(lines)
+    private fun findPathRisk(map: Map<Coord, Int>): Int {
         val path = aStar(map)
         return path.drop(1).sumOf { map[it]!! }
     }
 
-    fun part2(lines: List<String>): Int {
-        val map = expand(parse(lines))
-        val path = aStar(map)
-        return path.drop(1).sumOf { map[it]!! }
-    }
+    fun part1(lines: List<String>): Int = findPathRisk(parse(lines))
+
+    fun part2(lines: List<String>): Int = findPathRisk(expand(parse(lines)))
 }
 
 fun main() {
