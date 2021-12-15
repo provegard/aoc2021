@@ -1,11 +1,10 @@
-
 object Day14 {
 
     private fun parse(lines: List<String>): Pair<String, Map<String, String>> {
         val template = lines.first()
 
         val rules = lines.drop(2).fold(emptyMap<String, String>()) { acc, line ->
-            val (src, dst) = line.split("[ ]+->[ ]+".toPattern())
+            val (src, dst) = line.split(" -> ")
             acc + (src to dst)
         }
 
@@ -19,24 +18,17 @@ object Day14 {
     private fun <K, V>entryPairs(m: Map<K, V>) = m.entries.map { it.key to it.value }
 
     private fun applyRules(freq: Map<String, Long>, rules: Map<String, String>): Map<String, Long> {
-        val delta = freq.entries.fold(emptyList<Pair<String, Long>>()) { d, e ->
-            val ins = rules[e.key]
-            if (ins != null) {
-                val newPair1 = e.key[0] + ins
-                val newPair2 = ins + e.key[1]
-                d + listOf(
-                    e.key to -e.value,   // remove old pair
-                    newPair1 to e.value, // add first new pair
-                    newPair2 to e.value, // add second new pair
-                )
-            } else d
+        val newFreq = freq.entries.fold(emptyMap<String, Long>()) { np, e ->
+            val ins = rules[e.key]!!
+            val newPair1 = e.key[0] + ins
+            val newPair2 = ins + e.key[1]
+            np + listOf(
+                newPair1 to np.getOrDefault(newPair1, 0L) + e.value, // add first new pair
+                newPair2 to np.getOrDefault(newPair2, 0L) + e.value, // add second new pair
+            )
         }
 
-        return (entryPairs(freq) + delta)
-            .groupBy { it.first }                               // group by pair
-            .map { it.key to it.value.sumOf { p -> p.second } } // calculate new count for each pair
-            .filter { it.second > 0L }                          // drop non-existent pairs
-            .toMap()
+        return newFreq
     }
 
     fun diff(lines: List<String>, steps: Int = 10): Long {
@@ -49,8 +41,7 @@ object Day14 {
         val entryPairs = entryPairs(finalFreq).plus(Pair("${template.last()}", 1L))
         val charFrequencies = entryPairs.map { it.first[0] to it.second }.groupBy { it.first }.map { it.key to it.value.sumOf { p -> p.second } }
 
-        val frequencies = charFrequencies.map { it.second }.sortedDescending()
-        return frequencies.first() - frequencies.last()
+        return charFrequencies.maxOf { it.second } - charFrequencies.minOf { it.second }
     }
 
 }
