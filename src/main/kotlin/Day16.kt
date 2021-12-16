@@ -51,8 +51,7 @@ object Day16 {
         val lengthTypeId = bits.take(1).first()
         val subPackets = if (lengthTypeId == "0") {
             val len = valueOf(bits.take(15)).toInt()
-            val subBits = bits.take(len)
-            parsePackets(subBits.iterator())
+            parsePackets(bits.take(len).iterator())
         } else {
             val count = valueOf(bits.take(11)).toInt()
             parsePackets(bits, count)
