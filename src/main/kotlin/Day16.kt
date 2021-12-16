@@ -1,9 +1,13 @@
 object Day16 {
 
     data class Packet(val version: Int, val typeId: Int, val value: ULong, val subPackets: List<Packet>) {
-        fun visit(visitor: (Packet) -> Unit) {
-            visitor(this)
-            for (p in subPackets) p.visit(visitor)
+
+        fun flatten(): Sequence<Packet> {
+            val self = this
+            return sequence {
+                yield(self)
+                yieldAll(subPackets.flatMap { it.flatten() })
+            }
         }
 
         fun calculate(): ULong {
@@ -92,9 +96,7 @@ object Day16 {
 
     fun part1(input: String): Int {
         val (packet, _) = parsePacket(hexToBits(input))
-        var verSum = 0
-        packet.visit { verSum += it.version }
-        return verSum
+        return packet.flatten().sumOf { it.version }
     }
 
     fun part2(input: String): ULong {
