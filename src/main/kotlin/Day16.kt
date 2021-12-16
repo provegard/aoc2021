@@ -1,9 +1,23 @@
 object Day16 {
 
-    data class Packet(val version: Int, val typeId: Int, val subPackets: List<Packet>) {
+    data class Packet(val version: Int, val typeId: Int, val value: ULong, val subPackets: List<Packet>) {
         fun visit(visitor: (Packet) -> Unit) {
             visitor(this)
             for (p in subPackets) p.visit(visitor)
+        }
+
+        fun calculate(): ULong {
+            return when (typeId) {
+                0 -> subPackets.sumOf { it.calculate() }
+                1 -> subPackets.fold(1UL) { acc, p -> acc * p.calculate() }
+                2 -> subPackets.minOf { it.calculate() }
+                3 -> subPackets.maxOf { it.calculate() }
+                4 -> value
+                5 -> if (subPackets[0].calculate() > subPackets[1].calculate()) 1UL else 0UL
+                6 -> if (subPackets[0].calculate() < subPackets[1].calculate()) 1UL else 0UL
+                7 -> if (subPackets[0].calculate() == subPackets[1].calculate()) 1UL else 0UL
+                else -> throw RuntimeException("Unknown type ID: $typeId")
+            }
         }
     }
 
@@ -12,7 +26,7 @@ object Day16 {
         return bitRep.toCharArray().map { "$it"}
     }
 
-    private fun toBits(input: String): List<String> = input.toCharArray().map { "$it".toInt(16) }.flatMap { toBits(it) }
+    private fun hexToBits(input: String): List<String> = input.toCharArray().map { "$it".toInt(16) }.flatMap { toBits(it) }
 
     private fun valueOf(bits: List<String>) = bits.joinToString("").toInt(2)
 
@@ -32,8 +46,9 @@ object Day16 {
     }
 
     private fun parseLiteralPacket(version: Int, bits: List<String>): Pair<Packet, List<String>> {
-        val (value, rest) = parseLiteral("", bits)
-        val pkg = Packet(version, 4, emptyList()) // TODO: Payload (value)
+        val (valueBitString, rest) = parseLiteral("", bits)
+        val value = valueBitString.toULong(2)
+        val pkg = Packet(version, 4, value, emptyList())
         return pkg to rest
     }
 
@@ -55,12 +70,12 @@ object Day16 {
             val len = valueOf(lenBits)
             val (subBits, rest3) = take2(rest2, len)
             val (subPackets, _) = parsePackets(subBits)
-            return Packet(version, typeId, subPackets) to rest3
+            return Packet(version, typeId, 0UL, subPackets) to rest3
         }
         val (countBits, rest2) = take2(rest, 11)
         val count = valueOf(countBits)
         val (subPackets, rest3) = parsePackets(rest2, count)
-        return Packet(version, typeId, subPackets) to rest3
+        return Packet(version, typeId, 0UL, subPackets) to rest3
     }
 
     private fun parsePacket(bits: List<String>): Pair<Packet, List<String>> {
@@ -76,10 +91,15 @@ object Day16 {
     }
 
     fun part1(input: String): Int {
-        val (packet, _) = parsePacket(toBits(input))
+        val (packet, _) = parsePacket(hexToBits(input))
         var verSum = 0
         packet.visit { verSum += it.version }
         return verSum
+    }
+
+    fun part2(input: String): ULong {
+        val (packet, _) = parsePacket(hexToBits(input))
+        return packet.calculate()
     }
 }
 
@@ -91,4 +111,5 @@ fun main() {
     assert(23, Day16.part1("C0015000016115A2E0802F182340"), "Part 1, example 3")
     assert(31, Day16.part1("A0016C880162017C3686B18A3D4780"), "Part 1, example 4")
     assert(821, Day16.part1(lines.first()), "Part 1")
+    assert(2056021084691UL, Day16.part2(lines.first()), "Part 2")
 }
