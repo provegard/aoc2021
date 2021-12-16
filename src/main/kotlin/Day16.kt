@@ -2,26 +2,18 @@ object Day16 {
 
     data class Packet(val version: Int, val typeId: Int, val value: ULong, val subPackets: List<Packet>) {
 
-        fun flatten(): Sequence<Packet> {
-            val self = this
-            return sequence {
-                yield(self)
-                yieldAll(subPackets.flatMap { it.flatten() })
-            }
-        }
+        fun flatten(): List<Packet> = listOf(this) + subPackets.flatMap { it.flatten() }
 
-        fun calculate(): ULong {
-            return when (typeId) {
-                0 -> subPackets.sumOf { it.calculate() }
-                1 -> subPackets.fold(1UL) { acc, p -> acc * p.calculate() }
-                2 -> subPackets.minOf { it.calculate() }
-                3 -> subPackets.maxOf { it.calculate() }
-                4 -> value
-                5 -> if (subPackets[0].calculate() > subPackets[1].calculate()) 1UL else 0UL
-                6 -> if (subPackets[0].calculate() < subPackets[1].calculate()) 1UL else 0UL
-                7 -> if (subPackets[0].calculate() == subPackets[1].calculate()) 1UL else 0UL
-                else -> throw RuntimeException("Unknown type ID: $typeId")
-            }
+        fun calculate(): ULong = when (typeId) {
+            0 -> subPackets.sumOf { it.calculate() }
+            1 -> subPackets.fold(1UL) { acc, p -> acc * p.calculate() }
+            2 -> subPackets.minOf { it.calculate() }
+            3 -> subPackets.maxOf { it.calculate() }
+            4 -> value
+            5 -> if (subPackets[0].calculate() > subPackets[1].calculate()) 1UL else 0UL
+            6 -> if (subPackets[0].calculate() < subPackets[1].calculate()) 1UL else 0UL
+            7 -> if (subPackets[0].calculate() == subPackets[1].calculate()) 1UL else 0UL
+            else -> throw RuntimeException("Unknown type ID: $typeId")
         }
     }
 
@@ -30,79 +22,58 @@ object Day16 {
         return bitRep.toCharArray().map { "$it"}
     }
 
-    private fun hexToBits(input: String): List<String> = input.toCharArray().map { "$it".toInt(16) }.flatMap { toBits(it) }
+    private fun hexToBitIter(input: String): Iterator<String> = input.toCharArray().map { "$it".toInt(16) }.flatMap { toBits(it) }.iterator()
 
-    private fun valueOf(bits: List<String>) = bits.joinToString("").toInt(2)
+    private fun valueOf(bits: List<String>) = bits.joinToString("").toULong(2)
+    private fun valueOf(bits: Sequence<String>) = valueOf(bits.toList())
 
-    private fun <T>take2(list: List<T>, count: Int): Pair<List<T>, List<T>> {
-        val a = list.take(count)
-        val b = list.drop(count)
-        return a to b
-    }
-
-    private fun parseLiteral(prefix: String, bits: List<String>): Pair<String, List<String>> {
-        val (chunk, rest) = take2(bits, 5)
-        val value = prefix + chunk.drop(1).joinToString("")
-        if (chunk[0] == "0") {
-            return value to rest
+    private fun parseLiteral(prefix: List<String>, bits: Iterator<String>): List<String> {
+        val chunk = bits.take(5).toList()
+        val value = prefix + chunk.drop(1)
+        return when (chunk.first()) {
+            "0" -> value
+            else -> parseLiteral(value, bits)
         }
-        return parseLiteral(value, rest)
     }
 
-    private fun parseLiteralPacket(version: Int, bits: List<String>): Pair<Packet, List<String>> {
-        val (valueBitString, rest) = parseLiteral("", bits)
-        val value = valueBitString.toULong(2)
-        val pkg = Packet(version, 4, value, emptyList())
-        return pkg to rest
+    private fun parseLiteralPacket(version: Int, bits: Iterator<String>): Packet {
+        val valueBits = parseLiteral(emptyList(), bits)
+        val value = valueOf(valueBits)
+        return Packet(version, 4, value, emptyList())
     }
 
-    private tailrec fun parsePackets(mem: List<Packet>, bits: List<String>, count: Int = Int.MAX_VALUE): Pair<List<Packet>, List<String>> {
-        if (bits.isEmpty() || count == 0) return mem to bits
-        val (pkg, rest) = parsePacket(bits)
-        return parsePackets(mem + pkg, rest, count - 1)
+    private tailrec fun parsePackets(mem: List<Packet>, bits: Iterator<String>, count: Int = Int.MAX_VALUE): List<Packet> {
+        if (!bits.hasNext() || count == 0) return mem
+        val pkg = parsePacket(bits)
+        return parsePackets(mem + pkg, bits, count - 1)
     }
 
-    private fun parsePackets(bits: List<String>, count: Int = Int.MAX_VALUE): Pair<List<Packet>, List<String>> {
-        return parsePackets(emptyList(), bits, count)
-    }
+    private fun parsePackets(bits: Iterator<String>, count: Int = Int.MAX_VALUE): List<Packet> = parsePackets(emptyList(), bits, count)
 
-    private fun parseOperatorPacket(version: Int, typeId: Int, bits: List<String>): Pair<Packet, List<String>> {
-        val (lengthTypeIdBits, rest) = take2(bits, 1)
-        val lengthTypeId = lengthTypeIdBits.first()
-        if (lengthTypeId == "0") {
-            val (lenBits, rest2) = take2(rest, 15)
-            val len = valueOf(lenBits)
-            val (subBits, rest3) = take2(rest2, len)
-            val (subPackets, _) = parsePackets(subBits)
-            return Packet(version, typeId, 0UL, subPackets) to rest3
+    private fun parseOperatorPacket(version: Int, typeId: Int, bits: Iterator<String>): Packet {
+        val lengthTypeId = bits.take(1).first()
+        val subPackets = if (lengthTypeId == "0") {
+            val len = valueOf(bits.take(15)).toInt()
+            val subBits = bits.take(len)
+            parsePackets(subBits.iterator())
+        } else {
+            val count = valueOf(bits.take(11)).toInt()
+            parsePackets(bits, count)
         }
-        val (countBits, rest2) = take2(rest, 11)
-        val count = valueOf(countBits)
-        val (subPackets, rest3) = parsePackets(rest2, count)
-        return Packet(version, typeId, 0UL, subPackets) to rest3
+        return Packet(version, typeId, 0UL, subPackets)
     }
 
-    private fun parsePacket(bits: List<String>): Pair<Packet, List<String>> {
-        val (verBits, rest) = take2(bits, 3)
-        val (typeIdBits, data) = take2(rest, 3)
-        val version = valueOf(verBits)
-        val typeId = valueOf(typeIdBits)
-        if (typeId == 4) {
-            // Literal
-            return parseLiteralPacket(version, data)
-        }
-        return parseOperatorPacket(version, typeId, data)
+    private fun parsePacket(bits: Iterator<String>): Packet {
+        val version = valueOf(bits.take(3)).toInt()
+        val typeId = valueOf(bits.take(3)).toInt()
+        return if (typeId == 4)
+            parseLiteralPacket(version, bits) else
+            parseOperatorPacket(version, typeId, bits)
     }
 
-    fun part1(input: String): Int {
-        val (packet, _) = parsePacket(hexToBits(input))
-        return packet.flatten().sumOf { it.version }
-    }
+    fun part1(input: String): Int = parsePacket(hexToBitIter(input)).flatten().sumOf { it.version }
 
-    fun part2(input: String): ULong {
-        val (packet, _) = parsePacket(hexToBits(input))
-        return packet.calculate()
-    }
+    fun part2(input: String): ULong = parsePacket(hexToBitIter(input)).calculate()
 }
 
 fun main() {

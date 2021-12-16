@@ -52,3 +52,15 @@ fun aStar(start: Coord, goal: Coord, h: (Coord, Coord) -> Int, d: (Coord, Coord)
     }
     throw RuntimeException("Failed to reach end")
 }
+
+fun <T>Iterator<T>.take(n: Int): Sequence<T> {
+    val iter = this
+    return sequence {
+        var left = n
+        while (left > 0) {
+            if (!iter.hasNext()) throw RuntimeException("End of iterator, could only take ${n - left} of $n")
+            yield(iter.next())
+            left--
+        }
+    }
+}
