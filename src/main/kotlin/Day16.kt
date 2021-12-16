@@ -27,13 +27,10 @@ object Day16 {
     private fun valueOf(bits: List<String>) = bits.joinToString("").toULong(2)
     private fun valueOf(bits: Sequence<String>) = valueOf(bits.toList())
 
-    private fun parseLiteral(prefix: List<String>, bits: Iterator<String>): List<String> {
+    private tailrec fun parseLiteral(prefix: List<String>, bits: Iterator<String>): List<String> {
         val chunk = bits.take(5).toList()
         val value = prefix + chunk.drop(1)
-        return when (chunk.first()) {
-            "0" -> value
-            else -> parseLiteral(value, bits)
-        }
+        return if (chunk.first() == "0") value else parseLiteral(value, bits)
     }
 
     private fun parseLiteralPacket(version: Int, bits: Iterator<String>): Packet {
