@@ -30,12 +30,12 @@ object Day17 {
     }
 
 
-    private fun simulate(steps: Int, target: TargetArea, spread: Int = 20): List<Pair<Coord, Positions>> {
-        val velocities = (1..spread).flatMap { x -> (-spread..spread).map { y -> Coord(x, y) } }
+    private fun simulate(steps: Int, target: TargetArea): List<Pair<Coord, Positions>> {
+        val velocities = (1..target.xEnd).flatMap { x -> (target.yStart..-target.yStart).map { y -> Coord(x, y) } }
         return velocities.map { it to simulate(it, steps, target) }.filter { it.second.isNotEmpty() }
     }
 
-    private fun sim(area: TargetArea) = simulate(200, area, 350)
+    private fun sim(area: TargetArea) = simulate(200, area)
 
     fun part1(area: TargetArea) = sim(area).maxOf { it.second.maxY() }
 
