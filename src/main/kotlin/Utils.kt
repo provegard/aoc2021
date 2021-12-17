@@ -64,3 +64,16 @@ fun <T>Iterator<T>.take(n: Int): Sequence<T> {
         }
     }
 }
+
+fun sign(a: Int): Int {
+    return if (a < 0) -1 else (if (a > 0) 1 else 0)
+}
+
+fun <T> Sequence<T>.takeWhileInclusive(pred: (T) -> Boolean): Sequence<T> {
+    var shouldContinue = true
+    return takeWhile {
+        val result = shouldContinue
+        shouldContinue = pred(it)
+        result
+    }
+}
