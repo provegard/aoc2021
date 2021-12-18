@@ -8,7 +8,8 @@ fun readLines(day: String): List<String> {
 
 fun <T>assert(expected: T, actual: T, desc: String) {
     if (expected != actual) {
-        throw RuntimeException("$desc: Expected $expected but got $actual")
+        val msg = "$desc:\nExpected $expected\nbut got  $actual"
+        throw RuntimeException(msg)
     }
     println("$desc: OK!")
 }
