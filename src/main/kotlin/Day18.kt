@@ -6,55 +6,40 @@ import Day18.parse
 import kotlin.math.roundToInt
 
 object Day18 {
-
-    data class Cell(val num: Int, val depth: Int) {
+    interface HasDepth { val depth: Int }
+    data class Cell(val num: Int, override val depth: Int): HasDepth {
         fun add(n: Int) = Cell(num + n, depth)
+        fun oneDeeper() = Cell(num, depth + 1)
     }
 
-    data class StringAtDepth(val s: String, val depth: Int)
-    data class MagAtDepth(val n: Int, val depth: Int)
+    data class StringAtDepth(val s: String, override val depth: Int): HasDepth
+
+    private fun <T> reduceToSingle(list: List<T>, createReplacement: (T, T) -> T): T where T : HasDepth {
+        val maxDepth = list.maxOf { it.depth }
+        val result = (maxDepth downTo 0).fold(list) { acc, depth ->
+            generateSequence(acc) {
+                val idx = it.indexOfFirst { x -> x.depth == depth }
+                if (idx < 0) null else {
+                    val (a, b) = it.drop(idx).take(2)
+                    val replacement = createReplacement(a, b)
+                    it.take(idx) + replacement + it.drop(idx + 2)
+                }
+            }.last()
+        }
+        return result.single()
+    }
 
     data class Number(val cells: List<Cell>) {
         override fun toString(): String {
-            val sads = cells.map { StringAtDepth("${(48 + it.num).toChar()}", it.depth) }
-            val x = (4 downTo 0).fold(sads) { acc, depth ->
-                var tmpList = acc
-                while (true) {
-                    val idx = tmpList.indexOfFirst { it.depth == depth }
-                    if (idx < 0) break
-                    val consecutive = tmpList.drop(idx).takeWhile { it.depth == depth }.take(2)
-                    val replacement = StringAtDepth("[" + consecutive.joinToString(",") { it.s } + "]", depth - 1)
-                    tmpList = tmpList.take(idx) + replacement + tmpList.drop(idx + consecutive.size)
-                }
-                tmpList
-            }
-            return x.first().s
+            val sads = cells.map { StringAtDepth("${it.num}", it.depth) }
+            return reduceToSingle(sads) { a, b -> StringAtDepth("[${a.s},${b.s}]", a.depth - 1) }.s
         }
 
-        fun magnitude(): Int {
-            val mads = cells.map { MagAtDepth(it.num, it.depth) }
-            val x = (4 downTo 0).fold(mads) { acc, depth ->
-                var tmpList = acc
-                while (true) {
-                    val idx = tmpList.indexOfFirst { it.depth == depth }
-                    if (idx < 0) break
-                    val consecutive = tmpList.drop(idx).takeWhile { it.depth == depth }.take(2)
-                    val (a, b) = consecutive
-                    val replValue = 3 * a.n + 2 * b.n
-                    val replacement = MagAtDepth(replValue, depth - 1)
-                    tmpList = tmpList.take(idx) + replacement + tmpList.drop(idx + consecutive.size)
-                }
-                tmpList
-            }
-            return x.first().n
-        }
+        fun magnitude(): Int =
+            reduceToSingle(cells) { a, b -> Cell(3 * a.num + 2 * b.num, a.depth - 1) }.num
     }
 
-    fun add(a: Number, b: Number): Number {
-        val left = a.cells.map { Cell(it.num, it.depth + 1) }
-        val right = b.cells.map { Cell(it.num, it.depth + 1) }
-        return Number(left + right)
-    }
+    private fun add(a: Number, b: Number) = Number((a.cells + b.cells).map { it.oneDeeper() })
 
     fun explode(n: Number): Number? {
         val nested = n.cells.indexOfFirst { it.depth == 4 }
@@ -87,7 +72,7 @@ object Day18 {
         return null
     }
 
-    fun reduce(n: Number): Number = generateSequence(n) { reduceOne(it) }.last()
+    private fun reduce(n: Number): Number = generateSequence(n) { reduceOne(it) }.last()
 
     fun addAndReduce(a: Number, b: Number) = reduce(add(a, b))
 
