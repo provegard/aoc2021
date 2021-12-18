@@ -64,15 +64,7 @@ object Day18 {
         return Number(n.cells.take(large) + newCells + n.cells.drop(large + 1))
     }
 
-    private fun reduceOne(n: Number): Number? {
-        val exploded = explode(n)
-        if (exploded != null) return exploded
-        val splitt = split(n)
-        if (splitt != null) return splitt
-        return null
-    }
-
-    private fun reduce(n: Number): Number = generateSequence(n) { reduceOne(it) }.last()
+    private fun reduce(n: Number): Number = generateSequence(n) { explode(it) ?: split(it) }.last()
 
     fun addAndReduce(a: Number, b: Number) = reduce(add(a, b))
 
@@ -83,11 +75,7 @@ object Day18 {
                 '[' -> list to (depth + 1)
                 ']' -> list to (depth - 1)
                 ',' -> list to depth
-                else -> {
-                    val n = ch.code - 48
-                    val cell = Cell(n, depth)
-                    (list + cell) to depth
-                }
+                else -> (list + Cell(ch.code - 48, depth)) to depth
             }
         }
         return Number(cells)
@@ -95,7 +83,7 @@ object Day18 {
 
     fun part1(lines: List<String>): Int {
         val numbers = lines.map { parse(it) }
-        val result = numbers.drop(1).fold(numbers.first()) { acc, next -> addAndReduce(acc, next) }
+        val result = numbers.drop(1).fold(numbers.first(), ::addAndReduce)
         return result.magnitude()
     }
 
