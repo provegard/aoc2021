@@ -23,19 +23,19 @@ object Day17 {
             pos.x > area.xEnd || pos.y < area.yStart
     }
 
-    private fun simulate(v: Coord, steps: Int, target: TargetArea): Positions {
+    private fun simulate(v: Coord, target: TargetArea): Positions {
         val probe = Probe(Coord(0, 0), v)
-        val probes = generateSequence(probe) { it.step() }.take(steps).takeWhileInclusive { !it.inTarget(target) && !it.passedTarget(target) }.toList()
+        val probes = generateSequence(probe) { it.step() }.takeWhileInclusive { !it.inTarget(target) && !it.passedTarget(target) }.toList()
         return if (probes.last().inTarget(target)) Positions(probes.map { it.pos }) else Positions(emptyList())
     }
 
 
-    private fun simulate(steps: Int, target: TargetArea): List<Pair<Coord, Positions>> {
+    private fun simulate(target: TargetArea): List<Pair<Coord, Positions>> {
         val velocities = (1..target.xEnd).flatMap { x -> (target.yStart..-target.yStart).map { y -> Coord(x, y) } }
-        return velocities.map { it to simulate(it, steps, target) }.filter { it.second.isNotEmpty() }
+        return velocities.map { it to simulate(it, target) }.filter { it.second.isNotEmpty() }
     }
 
-    private fun sim(area: TargetArea) = simulate(200, area)
+    private fun sim(area: TargetArea) = simulate(area)
 
     fun part1(area: TargetArea) = sim(area).maxOf { it.second.maxY() }
 
