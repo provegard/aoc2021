@@ -78,3 +78,14 @@ fun <T> Sequence<T>.takeWhileInclusive(pred: (T) -> Boolean): Sequence<T> {
         result
     }
 }
+
+fun <A> Iterable<A>.pairs(): Sequence<Pair<A, A>> {
+    val self = this
+    return sequence {
+        self.forEach { a ->
+            self.forEach { b ->
+                if (a != b) yield(a to b)
+            }
+        }
+    }
+}

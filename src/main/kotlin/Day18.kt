@@ -113,6 +113,11 @@ object Day18 {
         val result = numbers.drop(1).fold(numbers.first()) { acc, next -> addAndReduce(acc, next) }
         return result.magnitude()
     }
+
+    fun part2(lines: List<String>): Int {
+        val numbers = lines.map { parse(it) }
+        return numbers.pairs().maxOf { addAndReduce(it.first, it.second).magnitude() }
+    }
 }
 
 fun main() {
@@ -144,5 +149,9 @@ fun main() {
     assert("[[[[0,7],4],[[7,8],[6,0]]],[8,1]]", addAndReduce(parse("[[[[4,3],4],4],[7,[[8,4],9]]]"), parse("[1,1]")).toString(), "add and reduce test")
 
     val lines = readLines("day18")
-    assert(0, Day18.part1(lines), "Part 1")
+    val testLines = readLines("day18_test")
+
+    assert(4124, Day18.part1(lines), "Part 1")
+    assert(3993, Day18.part2(testLines), "Part 2, test")
+    assert(4673, Day18.part2(lines), "Part 2") // 4185 too low
 }
