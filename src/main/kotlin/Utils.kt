@@ -1,6 +1,7 @@
 import java.io.File
 import java.util.*
 import kotlin.Comparator
+import kotlin.math.abs
 
 fun readLines(day: String): List<String> {
     return File("input/${day}.txt").useLines { it.toList() }
@@ -17,6 +18,17 @@ fun <T>assert(expected: T, actual: T, desc: String) {
 data class Pos(val r: Int, val c: Int)
 
 data class Coord(val x: Int, val y: Int)
+data class Vector3D(val x: Int, val y: Int, val z: Int) {
+    operator fun minus(other: Vector3D) = Vector3D(x - other.x, y - other.y, z - other.z)
+    operator fun plus(other: Vector3D) = Vector3D(x + other.x, y + other.y, z + other.z)
+    operator fun unaryMinus() = Vector3D(-x, -y, -z)
+
+    companion object {
+        val zero = Vector3D(0, 0, 0)
+    }
+
+    fun manhattan(other: Vector3D) = abs(x - other.x) + abs(y - other.y) + abs(z - other.z)
+}
 
 fun aStar(start: Coord, goal: Coord, h: (Coord, Coord) -> Int, d: (Coord, Coord) -> Int, neighbors: (Coord) -> List<Coord>): List<Coord> {
     val cameFrom = mutableMapOf<Coord, Coord>()
@@ -85,6 +97,17 @@ fun <A> Iterable<A>.pairs(): Sequence<Pair<A, A>> {
         self.forEach { a ->
             self.forEach { b ->
                 if (a != b) yield(a to b)
+            }
+        }
+    }
+}
+
+fun <A> Iterable<A>.pairsOneSided(): Sequence<Pair<A, A>> {
+    val self = this
+    return sequence {
+        self.forEachIndexed { ia, a ->
+            self.forEachIndexed { ib, b ->
+                if (ib > ia) yield(a to b)
             }
         }
     }
