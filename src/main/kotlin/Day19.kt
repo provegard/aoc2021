@@ -1,7 +1,8 @@
 import kotlin.system.measureTimeMillis
 
+typealias Beacon = Vector3D
+
 object Day19 {
-    data class Beacon(val id: String, val vec: Vector3D)
 
     class Scanner(val num: Int, val beacons: List<Beacon>, val pos: Vector3D)
 
@@ -21,31 +22,30 @@ object Day19 {
         val num = """\d+""".toRegex().find(l.first())!!.value.toInt()
         val beacons = l.drop(1).foldIndexed(emptyList<Beacon>()) { idx, acc, bl ->
             val (x, y, z) = bl.split(",")
-            val id = "$num-$idx"
-            acc + Beacon(id, Vector3D(x.toInt(), y.toInt(), z.toInt()))
+            acc + Beacon(x.toInt(), y.toInt(), z.toInt())
         }
         val scanner = Scanner(num, beacons, Vector3D.zero)
         return parse(lines.drop(l.size + 1), collected + scanner)
     }
 
     private fun syncSecondScanner(s1: Scanner, s2: Scanner): Scanner? {
-        val s1PairsByDiff = s1.beacons.pairs().associateBy { it.second.vec - it.first.vec }
+        val s1PairsByDiff = s1.beacons.pairs().associateBy { it.second - it.first }
 
         val match = rotations
             .map { rot ->
-                val s2BeaconsRotated = s2.beacons.map { Beacon(it.id, it.vec.rotXYZ(rot)) }
-                val s2PairsByDiff = s2BeaconsRotated.pairs().associateBy { it.second.vec - it.first.vec }
+                val s2BeaconsRotated = s2.beacons.map { it.rotXYZ(rot) }
+                val s2PairsByDiff = s2BeaconsRotated.pairs().associateBy { it.second - it.first }
 
                 val matchingPairs = s2PairsByDiff.entries.filter { s1PairsByDiff.containsKey(it.key) }
-                val uniqId = matchingPairs.toList().flatMap { p -> listOf(p.value.first.id, p.value.second.id) }.distinct()
+                val uniqId = matchingPairs.toList().flatMap { p -> listOf(p.value.first, p.value.second) }.distinct()
 
                 val diff = matchingPairs.firstOrNull()?.let {
-                    val v1 = s1PairsByDiff[it.key]!!.first.vec
-                    val v2 = s2PairsByDiff[it.key]!!.first.vec
+                    val v1 = s1PairsByDiff[it.key]!!.first
+                    val v2 = s2PairsByDiff[it.key]!!.first
                     v1 - v2
                 } ?: Vector3D.zero
 
-                val newBeacons = s2BeaconsRotated.map { b -> Beacon(b.id, b.vec + diff) }
+                val newBeacons = s2BeaconsRotated.map { b -> b + diff }
                 Triple(uniqId, newBeacons, diff)
             }
             .filter { it.first.size >= 12 }
@@ -71,7 +71,7 @@ object Day19 {
     fun part1(lines: List<String>): Int {
         val scanners = parse(lines)
         val locked = lockAll(scanners.take(1), scanners.drop(1))
-        val uniqPoints = locked.flatMap { it.beacons }.distinctBy { it.vec }
+        val uniqPoints = locked.flatMap { it.beacons }.distinct()
         return uniqPoints.size
     }
     fun part2(lines: List<String>): Int {
