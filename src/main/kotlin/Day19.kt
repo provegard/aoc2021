@@ -37,7 +37,7 @@ object Day19 {
                 val s2PairsByDiff = s2BeaconsRotated.pairs().associateBy { it.second - it.first }
 
                 val matchingPairs = s2PairsByDiff.entries.filter { s1PairsByDiff.containsKey(it.key) }
-                val uniqId = matchingPairs.toList().flatMap { p -> listOf(p.value.first, p.value.second) }.distinct()
+                val uniqId = matchingPairs.flatMap { p -> listOf(p.value.first, p.value.second) }.distinct()
 
                 val diff = matchingPairs.firstOrNull()?.let {
                     val v1 = s1PairsByDiff[it.key]!!.first
@@ -57,26 +57,25 @@ object Day19 {
     private tailrec fun lockAll(locked: List<Scanner>, rest: List<Scanner>): List<Scanner> {
         if (rest.isEmpty()) return locked
 
-        val newLocked = rest.flatMap { r ->
-            val first = locked.firstNotNullOfOrNull { syncSecondScanner(it, r) }
-            first?.let { listOf(it) } ?: emptyList()
-        }
-
+        val newLocked = rest.flatMap { r -> listOfNotNull(locked.firstNotNullOfOrNull { syncSecondScanner(it, r) }) }
         val newLockedNums = newLocked.map { it.num }.toSet()
 
         val newRest = rest.filter { !newLockedNums.contains(it.num) }
         return lockAll(locked + newLocked, newRest)
     }
 
-    fun part1(lines: List<String>): Int {
+    private fun parseAndLock(lines: List<String>): List<Scanner> {
         val scanners = parse(lines)
-        val locked = lockAll(scanners.take(1), scanners.drop(1))
+        return lockAll(scanners.take(1), scanners.drop(1))
+    }
+
+    fun part1(lines: List<String>): Int {
+        val locked = parseAndLock(lines)
         val uniqPoints = locked.flatMap { it.beacons }.distinct()
         return uniqPoints.size
     }
     fun part2(lines: List<String>): Int {
-        val scanners = parse(lines)
-        val locked = lockAll(scanners.take(1), scanners.drop(1))
+        val locked = parseAndLock(lines)
         return locked.pairsOneSided().maxOf { it.first.pos.manhattan(it.second.pos) }
     }
 }
