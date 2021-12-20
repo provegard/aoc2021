@@ -75,9 +75,9 @@ object Day20 {
     private fun enhanceSeq(algo: String, image: Image): Sequence<Pair<Image, Int>> =
         generateSequence(image to 0) { enhance(algo, it.first, it.second) to (it.second + 1) }
 
-    fun part1(lines: List<String>): Int {
+    fun enhanceMain(lines: List<String>, iter: Int = 2): Int {
         val (algo, image) = parse(lines)
-        val images = enhanceSeq(algo, image).take(1 + 2).toList()
+        val images = enhanceSeq(algo, image).take(1 + iter).toList()
 //        for (idx in images.indices) {
 //            dump(images[idx].first, algo, idx)
 //        }
@@ -89,6 +89,8 @@ fun main() {
     val testLines = readLines("day20_ex")
     val lines = readLines("day20")
 
-    assert(35, Day20.part1(testLines), "Day 20 part 1, example")
-    assert(5437, Day20.part1(lines), "Day 20 part 1")
+    assert(35, Day20.enhanceMain(testLines), "Day 20 part 1, example")
+    assert(5437, Day20.enhanceMain(lines), "Day 20 part 1")
+    assert(3351, Day20.enhanceMain(testLines, 50), "Day 20 part 2, example")
+    assert(19340, Day20.enhanceMain(lines, 50), "Day 20 part 2")
 }
