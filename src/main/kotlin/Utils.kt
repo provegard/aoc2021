@@ -28,6 +28,11 @@ data class Vector3D(val x: Int, val y: Int, val z: Int) {
     }
 
     fun manhattan(other: Vector3D) = abs(x - other.x) + abs(y - other.y) + abs(z - other.z)
+
+    fun rotX(rot: Int) = Rotation.rotateAroundX(this, rot)
+    fun rotY(rot: Int) = Rotation.rotateAroundY(this, rot)
+    fun rotZ(rot: Int) = Rotation.rotateAroundZ(this, rot)
+    fun rotXYZ(rot: Vector3D) = rotX(rot.x).rotY(rot.y).rotZ(rot.z)
 }
 
 fun aStar(start: Coord, goal: Coord, h: (Coord, Coord) -> Int, d: (Coord, Coord) -> Int, neighbors: (Coord) -> List<Coord>): List<Coord> {

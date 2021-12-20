@@ -1,9 +1,9 @@
-import kotlin.math.roundToInt
+import kotlin.system.measureTimeMillis
 
 object Day19 {
     data class Beacon(val id: String, val vec: Vector3D)
 
-    class Scanner(val num: Int, val beacons: List<Beacon>, val pos: Vector3D?)
+    class Scanner(val num: Int, val beacons: List<Beacon>, val pos: Vector3D)
 
     private val rotations = sequence {
         (0..3).forEach { x ->
@@ -24,19 +24,11 @@ object Day19 {
             val id = "$num-$idx"
             acc + Beacon(id, Vector3D(x.toInt(), y.toInt(), z.toInt()))
         }
-        val scanner = Scanner(num, beacons, if (num == 0) Vector3D.zero else null)
+        val scanner = Scanner(num, beacons, Vector3D.zero)
         return parse(lines.drop(l.size + 1), collected + scanner)
     }
 
-    private fun Vector3D.rotXYZ(rot: Vector3D): Vector3D {
-        val vd = Rotation.Vec3DD(this.x.toDouble(), this.y.toDouble(), this.z.toDouble())
-        val result = vd.rotX(rot.x).rotY(rot.y).rotZ(rot.z)
-        return Vector3D(result.x.roundToInt(), result.y.roundToInt(), result.z.roundToInt())
-    }
-
     private fun syncSecondScanner(s1: Scanner, s2: Scanner): Scanner? {
-        assert(s1.pos != null)
-
         val s1PairsByDiff = s1.beacons.pairs().associateBy { it.second.vec - it.first.vec }
 
         val match = rotations
@@ -64,7 +56,12 @@ object Day19 {
 
     private tailrec fun lockAll(locked: List<Scanner>, rest: List<Scanner>): List<Scanner> {
         if (rest.isEmpty()) return locked
-        val newLocked = rest.flatMap { r -> locked.mapNotNull { syncSecondScanner(it, r) } }
+
+        val newLocked = rest.flatMap { r ->
+            val first = locked.firstNotNullOfOrNull { syncSecondScanner(it, r) }
+            first?.let { listOf(it) } ?: emptyList()
+        }
+
         val newLockedNums = newLocked.map { it.num }.toSet()
 
         val newRest = rest.filter { !newLockedNums.contains(it.num) }
@@ -74,20 +71,13 @@ object Day19 {
     fun part1(lines: List<String>): Int {
         val scanners = parse(lines)
         val locked = lockAll(scanners.take(1), scanners.drop(1))
-        val beacons = locked.flatMap { it.beacons }.distinctBy { it.vec }
-        return beacons.size
+        val uniqPoints = locked.flatMap { it.beacons }.distinctBy { it.vec }
+        return uniqPoints.size
     }
-
-    fun scannerPositions(lines: List<String>): Map<Int, Vector3D> {
-        val scanners = parse(lines)
-        val locked = lockAll(scanners.take(1), scanners.drop(1))
-        return locked.associate { it.num to it.pos!! }
-    }
-
     fun part2(lines: List<String>): Int {
         val scanners = parse(lines)
         val locked = lockAll(scanners.take(1), scanners.drop(1))
-        return locked.pairsOneSided().maxOf { it.first.pos!!.manhattan(it.second.pos!!) }
+        return locked.pairsOneSided().maxOf { it.first.pos.manhattan(it.second.pos) }
     }
 }
 
@@ -96,14 +86,10 @@ fun main() {
     val lines = readLines("day19")
 
     assert(79, Day19.part1(testLines), "Part 1, test")
-    assert(365, Day19.part1(lines), "Part 1")
-
-    val scannerPosTest = Day19.scannerPositions(testLines)
-    assert(Vector3D(0, 0, 0), scannerPosTest[0], "Scanner 0 pos, test")
-    assert(Vector3D(68, -1246, -43), scannerPosTest[1], "Scanner 1 pos, test")
-    assert(Vector3D(-92, -2380, -20), scannerPosTest[3], "Scanner 3 pos, test")
-    assert(Vector3D(-20, -1133, 1061), scannerPosTest[4], "Scanner 4 pos, test")
-    assert(Vector3D(1105, -1205, 1229), scannerPosTest[2], "Scanner 2 pos, test")
+    val ms1 = measureTimeMillis {
+        assert(365, Day19.part1(lines), "Part 1")
+    }
+    println("Part 1 took $ms1 ms")
 
     assert(3621, Day19.part2(testLines), "Part 2, test")
     assert(11060, Day19.part2(lines), "Part 2")
