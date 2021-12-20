@@ -15,30 +15,6 @@ object Day20 {
         return algo to image
     }
 
-    private fun dump(image: Image, algo: String, iteration: Int) {
-        val margin = 3
-        val minR = image.keys.minOf { it.r } - margin
-        val minC = image.keys.minOf { it.c } - margin
-        val maxR = image.keys.maxOf { it.r } + margin
-        val maxC = image.keys.maxOf { it.c } + margin
-
-        println(iteration)
-        for (r in (minR..maxR)) {
-            for (c in minC..maxC) {
-                val pos = Pos(r, c)
-                val infLit = algo[0] == '#' && iteration % 2 == 1
-                val ch = when (image[pos]) {
-                    true -> '#'
-                    false -> '.'
-                    else -> if (infLit) '#' else '.'
-                }
-                print(ch)
-            }
-            println()
-        }
-        println()
-    }
-
     private fun win(pos: Pos): List<Pos> {
         return (-1..1).flatMap { r -> (-1..1).map { c -> Pair(r, c) } }
             .map { Pos(pos.r + it.first, pos.c + it.second) }
@@ -78,9 +54,6 @@ object Day20 {
     fun enhanceMain(lines: List<String>, iter: Int = 2): Int {
         val (algo, image) = parse(lines)
         val images = enhanceSeq(algo, image).take(1 + iter).toList()
-//        for (idx in images.indices) {
-//            dump(images[idx].first, algo, idx)
-//        }
         return images.last().first.count { it.value }
     }
 }
