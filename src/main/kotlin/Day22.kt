@@ -1,8 +1,5 @@
-import kotlinx.collections.immutable.PersistentSet
 import kotlin.math.max
 import kotlin.math.min
-
-typealias Reactor = PersistentSet<Vector3D>
 
 object Day22 {
     fun IntRange.intersect(other: IntRange): IntRange? {
@@ -17,16 +14,6 @@ object Day22 {
             (y.last - y.first + 1).toLong() *
             (z.last - z.first + 1).toLong()
 
-        fun cubes() = sequence {
-            x.forEach { xx ->
-                y.forEach { yy ->
-                    z.forEach { zz ->
-                        yield(Vector3D(xx, yy, zz))
-                    }
-                }
-            }
-        }
-
         fun intersect(other: Cuboid): Cuboid? {
             val xIsect = x.intersect(other.x) ?: return null
             val yIsect = y.intersect(other.y) ?: return null
@@ -38,27 +25,15 @@ object Day22 {
     class Reactor(private val deltas: List<Delta> = emptyList()) {
 
         private fun apply(delta: Delta): Reactor {
-            val toAdd = if (delta.on) {
-                // Add inverse compensations for intersections.
-                // on-on  => add a negative compensation (to not double-count)
-                // off-on => add a positive compensation (to cancel a previsous compensation)
-                val compensations = deltas.mapNotNull { prev ->
-                    val isect = prev.cuboid.intersect(delta.cuboid)
-                    if (isect != null) {
-                        Delta(!prev.on, isect)
-                    } else null
-                }
-                listOf(delta) + compensations
-            } else {
-                // Add negative deltas for intersections with positive deltas,
-                // and positive deltas for intersections with negative compensations.
-                deltas.mapNotNull { prev ->
-                    val isect = prev.cuboid.intersect(delta.cuboid)
-                    if (isect != null) {
-                        Delta(!prev.on, isect)
-                    } else null
-                }
+            // Add inverse compensations for intersections.
+            // on-*    => add a negative compensation (to not double-count)
+            // off-*   => add a positive compensation (to cancel a previous compensation)
+            val compensations = deltas.mapNotNull { prev ->
+                prev.cuboid.intersect(delta.cuboid)?.let { Delta(!prev.on, it) }
             }
+            val toAdd = if (delta.on) {
+                listOf(delta) + compensations
+            } else compensations
             return Reactor(deltas + toAdd)
         }
 
