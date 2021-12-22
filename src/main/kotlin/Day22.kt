@@ -1,11 +1,22 @@
 import kotlinx.collections.immutable.PersistentSet
-import kotlinx.collections.immutable.persistentSetOf
-import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 typealias Reactor = PersistentSet<Vector3D>
 
 object Day22 {
-    data class Instruction(val on: Boolean, val x: IntRange, val y: IntRange, val z: IntRange) {
+    fun IntRange.intersect(other: IntRange): IntRange? {
+        if (other.first > this.last) return null
+        if (other.last < this.first) return null
+        return max(first, other.first)..min(last, other.last)
+    }
+
+    data class Cuboid(val x: IntRange, val y: IntRange, val z: IntRange) {
+        fun count(): Long =
+            (x.last - x.first + 1).toLong() *
+            (y.last - y.first + 1).toLong() *
+            (z.last - z.first + 1).toLong()
+
         fun cubes() = sequence {
             x.forEach { xx ->
                 y.forEach { yy ->
@@ -15,7 +26,55 @@ object Day22 {
                 }
             }
         }
+
+        fun intersect(other: Cuboid): Cuboid? {
+            val xIsect = x.intersect(other.x) ?: return null
+            val yIsect = y.intersect(other.y) ?: return null
+            val zIsect = z.intersect(other.z) ?: return null
+            return Cuboid(xIsect, yIsect, zIsect)
+        }
     }
+
+    class Reactor(private val deltas: List<Delta> = emptyList()) {
+
+        private fun apply(delta: Delta): Reactor {
+            val toAdd = if (delta.on) {
+                // Add inverse compensations for intersections.
+                // on-on  => add a negative compensation (to not double-count)
+                // off-on => add a positive compensation (to cancel a previsous compensation)
+                val compensations = deltas.mapNotNull { prev ->
+                    val isect = prev.cuboid.intersect(delta.cuboid)
+                    if (isect != null) {
+                        Delta(!prev.on, isect)
+                    } else null
+                }
+                listOf(delta) + compensations
+            } else {
+                // Add negative deltas for intersections with positive deltas,
+                // and positive deltas for intersections with negative compensations.
+                deltas.mapNotNull { prev ->
+                    val isect = prev.cuboid.intersect(delta.cuboid)
+                    if (isect != null) {
+                        Delta(!prev.on, isect)
+                    } else null
+                }
+            }
+            return Reactor(deltas + toAdd)
+        }
+
+        fun apply(ins: Instruction): Reactor = apply(Delta(ins.on, ins.cuboid))
+
+        fun count(): Long {
+            return deltas.fold(0L) { count, delta ->
+                val cnt = delta.cuboid.count()
+                count + (if (delta.on) cnt else -cnt)
+            }
+        }
+    }
+
+    data class Delta(val on: Boolean, val cuboid: Cuboid)
+
+    data class Instruction(val on: Boolean, val cuboid: Cuboid)
 
     private fun parse(line: String): Instruction {
         // on x=-20..26,y=-36..17,z=-47..7
@@ -30,32 +89,54 @@ object Day22 {
         val zMax = values[11].toInt()
 
         val on = onOff == "on"
-        return Instruction(on, xMin..xMax, yMin..yMax, zMin..zMax)
+        return Instruction(on, Cuboid(xMin..xMax, yMin..yMax, zMin..zMax))
     }
 
     private fun parseLines(lines: List<String>) = lines.map(::parse)
 
-    private fun isInit(v: Vector3D) = abs(v.x) <= 50 && abs(v.y) <= 50 && abs(v.z) <= 50
     private fun isInit(ins: Instruction) =
-        ins.x.first >= -50 && ins.x.last <= 50 &&
-        ins.y.first >= -50 && ins.y.last <= 50 &&
-        ins.z.first >= -50 && ins.z.last <= 50
+        ins.cuboid.x.first >= -50 && ins.cuboid.x.last <= 50 &&
+        ins.cuboid.y.first >= -50 && ins.cuboid.y.last <= 50 &&
+        ins.cuboid.z.first >= -50 && ins.cuboid.z.last <= 50
 
-    fun part1(lines: List<String>): Int {
+    private fun run(instructions: List<Instruction>): Long {
+        return instructions.fold(Reactor()) { r, ins -> r.apply(ins) }.count()
+    }
+
+    fun part1(lines: List<String>): Long {
         val instructions = parseLines(lines)
         val initInstr = instructions.filter(::isInit)
-        val result = initInstr.fold(persistentSetOf<Vector3D>()) { reactor, instr ->
-            instr.cubes().fold(reactor) { r, c ->
-                if (instr.on) r.add(c) else r.remove(c)
-            }
-        }
-        return result.size
+        return run(initInstr)
+    }
+
+    fun part2(lines: List<String>): Long {
+        val instructions = parseLines(lines)
+        return run(instructions)
     }
 }
 
 fun main() {
     val testLines = readLines("day22_ex")
+    val testLines2 = readLines("day22_ex2")
     val lines = readLines("day22")
-    assert(590784, Day22.part1(testLines), "Part 1 test")
-    assert(615700, Day22.part1(lines), "Part 1")
+
+    assert(8L, Day22.part1(listOf("on x=0..1,y=0..1,z=0..1")), "test 1")
+    assert(16L, Day22.part1(listOf(
+        "on x=0..1,y=0..1,z=0..1",
+        "on x=2..3,y=2..3,z=2..3",
+    )), "test 2")
+    assert(7L, Day22.part1(listOf(
+        "on x=0..1,y=0..1,z=0..1",
+        "off x=1..2,y=1..2,z=1..2",
+    )), "test 3")
+    assert(8L + 8L - 1L, Day22.part1(listOf(
+        "on x=0..1,y=0..1,z=0..1",
+        "off x=1..2,y=1..2,z=1..2",
+        "on x=1..2,y=1..2,z=1..2",
+    )), "test 4")
+
+    assert(590784L, Day22.part1(testLines), "Part 1 test")
+    assert(615700L, Day22.part1(lines), "Part 1")
+    assert(2758514936282235L, Day22.part2(testLines2), "Part 2, test")
+    assert(1236463892941356L, Day22.part2(lines), "Part 2")
 }
