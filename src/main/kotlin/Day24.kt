@@ -1,9 +1,9 @@
-import kotlin.math.pow
+import kotlinx.collections.immutable.persistentListOf
 import kotlin.system.measureTimeMillis
 
 object Day24 {
 
-    fun program(next: () -> Long): Long {
+    private fun program(next: () -> Long): Long {
         var w = 0L
         var x = 0L
         var y = 0L
@@ -266,9 +266,15 @@ object Day24 {
         return z
     }
 
-    class UnexpectedValueException(val digit: Int, val expected: Int) : RuntimeException()
+    class UnexpectedValueException(val digit: Int, val expected: Int) : RuntimeException() {
+        override fun fillInStackTrace(): Throwable = this
+    }
 
-    fun opt(get: (Int) -> Long): Long {
+    class ContinueException : RuntimeException() {
+        override fun fillInStackTrace(): Throwable = this
+    }
+
+    private fun opt(get: (Int) -> Long): Long {
         var x: Long
         var rem: Long
         var slots: List<Long>
@@ -303,7 +309,7 @@ object Day24 {
         }
 
         val d11 = get(11)
-        x = rem - 11 // x = d6 + 5 - 11
+        x = rem - 11
         slots = slots.dropLast(1)
         if (x != d11) {
             throw UnexpectedValueException(11, x.toInt())
@@ -325,41 +331,36 @@ object Day24 {
 
         val d14 = get(14)
         x = rem - 11
-        slots = slots.dropLast(1)
+//        slots = slots.dropLast(1)
         if (x != d14) {
             throw UnexpectedValueException(14, x.toInt())
         }
 
-
-        return slots.reversed().foldIndexed(0L) { idx, acc, s -> acc + s * 26.0.pow(idx.toDouble()).toLong() }
+        return 0L
     }
 
-    private fun runProg(p: (() -> Long) -> Long, num: Long): Long {
+    private fun runProg(num: Long): Long {
         val digits = num.toString()
         var cur = 0
-        val z = p { (digits[cur++].code - 48).toLong() }
-        return z
+        return program { (digits[cur++].code - 48).toLong() }
     }
 
-    class DoneException(val value: Long) : RuntimeException()
-
-    private fun discover(mem: List<Int>, digit: Int, upper: Int, lower: Int, callback: (Long) -> Unit): Long {
+    private fun discover(mem: List<Int>, digit: Int, upper: Int, lower: Int, callback: (Long) -> Unit) {
         require(upper <= 9)
         require(lower >= 1)
         require(upper >= lower)
         if (mem.size == 14) {
-            return mem.joinToString("").toLong()
+            callback(mem.joinToString("").toLong())
         }
 
         for (n in upper downTo lower) {
             try {
                 opt {
                     if (it > mem.size) {
-                        val answer = discover(mem + n, digit + 1, 9, 1, callback)
-                        throw DoneException(answer)
+                        discover(mem + n, digit + 1, 9, 1, callback)
+                        throw ContinueException()
                     } else mem[it - 1].toLong()
                 }
-                throw RuntimeException("What here??")
             } catch (e: UnexpectedValueException) {
                 if (e.digit == digit) {
                     if (e.expected !in 1..9) {
@@ -367,22 +368,19 @@ object Day24 {
                     }
                     return discover(mem, digit, e.expected, e.expected, callback)
                 } else throw e
-            } catch (e: DoneException) {
-                if (e.value >= 0L) callback(e.value)
+            } catch (e: ContinueException) {
             }
         }
-
-        return -1L
     }
 
     private fun discover(callback: (Long) -> Unit) = discover(emptyList(), 1, 9, 1, callback)
 
     fun part(): Pair<Long, Long> {
-        val result = mutableListOf<Long>()
+        var result = persistentListOf<Long>()
 
-        discover { result.add(it) }
+        discover { result = result.add(it) }
 
-        val valid = result.filter { runProg(::program, it) == 0L }
+        val valid = result.filter { runProg(it) == 0L }
 
         val mx = valid.maxOrNull() ?: throw RuntimeException("???")
         val mn = valid.minOrNull() ?: throw RuntimeException("???")
