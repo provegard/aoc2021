@@ -266,9 +266,7 @@ object Day24 {
         return z
     }
 
-    class SetDigitToException(val digit: Int, val otherDigit: Int, val delta: Int) : RuntimeException()
     class UnexpectedValueException(val digit: Int, val expected: Int) : RuntimeException()
-    class LimitException(val digit: Int, val upper: Int, val lower: Int) : RuntimeException()
 
     fun opt(get: (Int) -> Long): Long {
         var x: Long
@@ -283,7 +281,7 @@ object Day24 {
 
         slots = listOf(d1 + 8, d2 + 16)
         if (d3 - 7 != d4) {
-            throw SetDigitToException(4, 3, -7)
+            throw UnexpectedValueException(4, (d3 - 7).toInt())
         }
 
         val d5 = get(5)
@@ -295,13 +293,13 @@ object Day24 {
         val d8 = get(8)
         rem = d6 + 5
         if (d7 - 5 != d8) {
-            throw SetDigitToException(8, 7, -5)
+            throw UnexpectedValueException(8, (d7 - 5).toInt())
         }
 
         val d9 = get(9)
         val d10 = get(10)
         if (d9 + 7 != d10) {
-            throw SetDigitToException(10, 9, 7)
+            throw UnexpectedValueException(10, (d9 + 7).toInt())
         }
 
         val d11 = get(11)
@@ -362,23 +360,6 @@ object Day24 {
                     } else mem[it - 1].toLong()
                 }
                 throw RuntimeException("What here??")
-            } catch (e: SetDigitToException) {
-                if (e.digit == digit) {
-                    val newValue = mem[e.otherDigit - 1] + e.delta
-                    if (newValue < 1) {
-                        // This means that otherDigit is too small right now
-                        require(e.delta < 0)
-                        val lowerBound = 1 - e.delta
-                        throw LimitException(e.otherDigit, 9, lowerBound)
-                    } else if (newValue > 9) {
-                        // This means that otherDigit is too large
-                        require(e.delta > 0)
-                        val upperBound = 9 - e.delta
-                        throw LimitException(e.otherDigit, upperBound, 1)
-                    } else {
-                        return discover(mem, digit, newValue, newValue, callback)
-                    }
-                } else throw e
             } catch (e: UnexpectedValueException) {
                 if (e.digit == digit) {
                     if (e.expected !in 1..9) {
@@ -386,12 +367,8 @@ object Day24 {
                     }
                     return discover(mem, digit, e.expected, e.expected, callback)
                 } else throw e
-            } catch (e: LimitException) {
-                if (e.digit == digit) {
-                    return discover(mem, digit, e.upper, e.lower, callback)
-                } else throw e
             } catch (e: DoneException) {
-                callback(e.value)
+                if (e.value >= 0L) callback(e.value)
             }
         }
 
@@ -405,9 +382,7 @@ object Day24 {
 
         discover { result.add(it) }
 
-        val numbers = result.filter { it != -1L }
-
-        val valid = numbers.filter { runProg(::program, it) == 0L }
+        val valid = result.filter { runProg(::program, it) == 0L }
 
         val mx = valid.maxOrNull() ?: throw RuntimeException("???")
         val mn = valid.minOrNull() ?: throw RuntimeException("???")
