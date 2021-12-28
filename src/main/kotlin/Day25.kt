@@ -1,6 +1,3 @@
-import kotlinx.collections.immutable.PersistentMap
-import kotlinx.collections.immutable.persistentMapOf
-import kotlinx.collections.immutable.putAll
 import kotlin.system.measureTimeMillis
 
 object Day25 {
@@ -9,11 +6,11 @@ object Day25 {
         FREE, EAST_FACING, SOUTH_FACING
     }
 
-    data class SeaBottom(val map: PersistentMap<Coord, CellType>, val height: Int, val width: Int) {
-        fun add(c: Coord, ct: CellType) = SeaBottom(map.put(c, ct), height, width)
+    data class SeaBottom(val map: Map<Coord, CellType>, val height: Int, val width: Int) {
+        fun add(c: Coord, ct: CellType) = SeaBottom(map.plus(c to ct), height, width)
 
         private fun adjacent(c: Coord): Coord {
-            val ct = map[c]!!
+            val ct = map.getOrDefault(c, CellType.FREE)
             val (x, y) = when (ct) {
                 CellType.EAST_FACING -> Coord(c.x + 1, c.y)
                 CellType.SOUTH_FACING -> Coord(c.x, c.y + 1)
@@ -25,18 +22,18 @@ object Day25 {
         fun move(ct: CellType): SeaBottom {
             val movable = map.entries.filter { it.value == ct }
                 .map { it.key to adjacent(it.key) }
-                .filter { map[it.second] == CellType.FREE }
+                .filter { !map.contains(it.second) }
             if (movable.isEmpty()) return this
 
-            val cleared = movable.map { it.first to CellType.FREE }
+            val cleared = movable.map { it.first }.toSet()
             val moved = movable.map { it.second to ct }
-            val newMap = map.putAll(cleared + moved)
+            val newMap = map.minus(cleared).plus(moved)
             return SeaBottom(newMap, height, width)
         }
     }
 
     private fun parse(lines: List<String>): SeaBottom {
-        val initial = SeaBottom(persistentMapOf(), lines.size, lines.first().length)
+        val initial = SeaBottom(mapOf(), lines.size, lines.first().length)
         return lines.foldIndexed(initial) { y, acc, line ->
             line.toCharArray().foldIndexed(acc) { x, acc2, ch ->
                 val cellType = when (ch) {
@@ -45,7 +42,7 @@ object Day25 {
                     'v' -> CellType.SOUTH_FACING
                     else -> throw RuntimeException("Unknown: $ch")
                 }
-                acc2.add(Coord(x, y), cellType)
+                if (cellType != CellType.FREE) acc2.add(Coord(x, y), cellType) else acc2
             }
         }
     }
